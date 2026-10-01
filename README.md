@@ -1,26 +1,29 @@
 # DUNE Event Preprocessing 2026 
-## Step 1: 
 
-This step processes one event from a 2026 HD antineutrino reco2 file and creates a ROOT TTree at recoEnergy/WC. The pixel-map and HDF5 stages have not been run.
+# Step 1
 
-Files used
+This step processes one event from a 2026 HD antineutrino reco2 file and creates a ROOT TTree at `recoEnergy/WC`.
+
+## Files used
+
 | Purpose | Path |
 |---|---|
-| 2026 input data | /mnt/ironwolf_14t2/users/jiaxi/dune2026mc/hd_anue/anue_dune10kt_1x2x6_1404_731_20230825T191639Z_gen_g4_detsim_hitreco_20260723T150214Z_reco2.root |
-| Original analyzer source shared by Bin (copied while available) | /home/binzhang/disk_binzhang/larsoft_test/Preprocessing_Alejandro/RecoEnergyS/RecoEnergyS_module.cc |
-| Compiled source copy | /home/nataliema/recoenergy_one_sl7/srcs/dunereco/dunereco/FDSensOpt/RecoEnergySOne/RecoEnergyS_module.cc |
-| CMake file for this module | /home/nataliema/recoenergy_one_sl7/srcs/dunereco/dunereco/FDSensOpt/RecoEnergySOne/CMakeLists.txt |
-| Compiled plugin | /home/nataliema/recoenergy_one_sl7/build_slf7.x86_64/dunereco/slf7.x86_64.e26.prof/lib/libRecoEnergyS_module.so |
-| One-event FHiCL | /home/nataliema/transformercvn_fcl_overrides/recoenergys_2026_one.fcl |
-| Reusable run script | /home/nataliema/run_recoenergy_2026_one.sh |
-| Output TTree ROOT file | /home/nataliema/recoenergy_2026_one_event/RecoEnergyS_2026_one.root |
-| Run log | /home/nataliema/recoenergy_2026_one_event.log |
-| Build log | /home/nataliema/recoenergy_sl7_build.log |
+| 2026 input data | `/mnt/ironwolf_14t2/users/jiaxi/dune2026mc/hd_anue/anue_dune10kt_1x2x6_1404_731_20230825T191639Z_gen_g4_detsim_hitreco_20260723T150214Z_reco2.root` |
+| Analyzer source copy used for the build | `/home/binzhang/disk_binzhang/larsoft_test/Preprocessing_Alejandro/RecoEnergyS/RecoEnergyS_module.cc` |
+| Compiled source copy | `/home/nataliema/recoenergy_one_sl7/srcs/dunereco/dunereco/FDSensOpt/RecoEnergySOne/RecoEnergyS_module.cc` |
+| CMake file for this module | `/home/nataliema/recoenergy_one_sl7/srcs/dunereco/dunereco/FDSensOpt/RecoEnergySOne/CMakeLists.txt` |
+| Compiled plugin | `/home/nataliema/recoenergy_one_sl7/build_slf7.x86_64/dunereco/slf7.x86_64.e26.prof/lib/libRecoEnergyS_module.so` |
+| One-event FHiCL | `/home/nataliema/transformercvn_fcl_overrides/recoenergys_2026_one.fcl` |
+| Run script | `/home/nataliema/run_recoenergy_2026_one.sh` |
+| Output ROOT file | `/home/nataliema/recoenergy_2026_one_event/RecoEnergyS_2026_one.root` |
+| Run log | `/home/nataliema/recoenergy_2026_one_event.log` |
+| Build log | `/home/nataliema/recoenergy_sl7_build.log` |
 
+The `jiaxi` path is used for the 2026 input data. I obtained the analyzer source from a shared `Preprocessing_Alejandro/RecoEnergyS` directory; the header of `RecoEnergyS_module.cc` credits Ilsoo Seong as its author. I copied the source and CMake file to my own work area and checked that the copies matched the shared files at the time. The shared preprocessing tree has since moved under `/mnt/ironwolf_14t2/users/binzhang/preprocessing/`; the table records the source path used when Step 1 was built.
 
 ## New FHiCL file
 
-The reco2 input uses `dune10kt_v5_1x2x6` geometry. The original `recoenergys.fcl` selected v2 geometry and ran additional producers. For this one-event test, I used v5 geometry and scheduled only the `RecoEnergyS` analyzer. The input already contains `hitfd` hits, `pandora` clusters and vertices, `pandoraShower` showers, `pandoraTrack` tracks, and the energy reconstruction products.
+The reco2 input uses `dune10kt_v5_1x2x6` geometry. The reference `recoenergys.fcl` selected v2 geometry and ran additional producers. For this one-event test, I used v5 geometry and scheduled only the `RecoEnergyS` analyzer. The input already contains `hitfd` hits, `pandora` clusters and vertices, `pandoraShower` showers, `pandoraTrack` tracks, and the energy reconstruction products.
 
 I saved the following file as `/home/nataliema/transformercvn_fcl_overrides/recoenergys_2026_one.fcl`:
 
@@ -113,7 +116,7 @@ The `services` table has a v2 geometry entry from the reference configuration. T
 
 ## Build
 
-I compiled `RecoEnergyS_module.cc` in `/home/nataliema/recoenergy_one_sl7`. The host runs Ubuntu 22.04, and the LArSoft build uses `slf7.x86_64.e26.prof`, so I built inside a Scientific Linux 7 Apptainer image. This was a one-time build; I do not rebuild for each event.
+I compiled my copy of `RecoEnergyS_module.cc` in `/home/nataliema/recoenergy_one_sl7`. The host runs Ubuntu 22.04, and the LArSoft build uses `slf7.x86_64.e26.prof`, so I built inside a Scientific Linux 7 Apptainer image. This was a one-time build; I do not rebuild for each event.
 
 The work area uses LArSoft `v10_23_00` and mrb `v6_09_13`. Its `srcs/CMakeLists.txt` includes `dunereco`, and `dunereco/dunereco/FDSensOpt/CMakeLists.txt` includes `RecoEnergySOne`. With those files already in place, I used the following build commands:
 
@@ -211,13 +214,13 @@ I ran it with:
 bash "$HOME/run_recoenergy_2026_one.sh"
 ```
 
-This command uses my paths on tau-neutrino. If you run it from your own account, first copy the FHiCL file and run script to your account, and build the RecoEnergyS plugin in your own LArSoft work area. Then update DEV, FCL, INPUT, and OUT in the script, and check that you can read the input ROOT file. The script will not run unchanged from another account.
+This command uses my paths on `tau-neutrino`. If you run it from another account, first copy the FHiCL and script to your account, build the `RecoEnergyS` plugin in your own LArSoft work area, and update `DEV`, `FCL`, `INPUT`, and `OUT` in the script. Also check the container bind paths and make sure you can read the input ROOT file. The script will not run unchanged from another account.
 
 The script uses a fixed output filename. Running it again can replace the previous ROOT file.
 
 ## Result
 
-My run returned:
+The run on September 30, 2026 returned:
 
 ```text
 lar_status=0
@@ -231,17 +234,72 @@ WC_ENTRIES=1
 
 The output ROOT file is about 2.0 MB. `WC_ENTRIES=1` confirms that `recoEnergy/WC` contains one event. I have not checked the reconstructed energy values against truth values yet.
 
+## Run a second 2026 event
+
+I made a separate FHiCL file and runner for the next event in the same reco2 input. The new runner uses `lar --nskip 1 -n 1`, so it skips the first event and processes exactly one event. I kept the first output in its original directory.
+
+| Purpose | Path |
+|---|---|
+| Second-event FHiCL | `/home/nataliema/transformercvn_fcl_overrides/recoenergys_2026_skip1.fcl` |
+| Second-event runner | `/home/nataliema/run_recoenergy_2026_skip1.sh` |
+| Second-event WC output | `/home/nataliema/recoenergy_2026_skip1_event/RecoEnergyS_2026_skip1.root` |
+
+```bash
+bash "$HOME/run_recoenergy_2026_skip1.sh"
+```
+
+This run returned `lar_status=0` and `WC_ENTRIES=1`. It processed event 73102 with 11,192 hits. Its PF vertex was `(127.84754, -304.3274, 493.51220)` cm; `PFVtxTPC` was 9 for all three planes, and the global wire and tick coordinates were valid. This is the event used for the original pixel-map macro below.
 
 # Step 2
 
-This step reads the one-event `recoEnergy/WC` tree from Step 1 and makes a pixel-map ROOT file. Alejandro's macro is used. The directory had moved from the path used in Step 1 to `/mnt/ironwolf_14t2/users/binzhang/preprocessing/Preprocessing_Alejandro`.
+This step reads a one-event `recoEnergy/WC` tree from Step 1 and makes a pixel-map ROOT file. I used the macro from the shared `Preprocessing_Alejandro` directory, which had moved to `/mnt/ironwolf_14t2/users/binzhang/preprocessing/Preprocessing_Alejandro`. I tested the first event with a local diagnostic copy of the macro and then processed the second event with the original macro and its `nue` selection.
+
+## Original macro on the second event
+
+The second event has valid PF-vertex map coordinates. I ran Bin's shared macro directly, without changing the map center or bypassing the `nue` cut:
+
+```bash
+MACRO=/mnt/ironwolf_14t2/users/binzhang/preprocessing/Preprocessing_Alejandro/make_text_file_to_root_trks_shws.C
+INPUT="$HOME/recoenergy_2026_skip1_event/RecoEnergyS_2026_skip1.root"
+WORK="$HOME/recoenergy_2026_skip1_event/step2_original"
+mkdir -p "$WORK"
+OUTPUT="$WORK/pixelmap_2026_skip1_nue.root"
+LOG="$WORK/pixelmap_2026_skip1_nue.log"
+
+root -l -b -q "$MACRO(\"$INPUT\",\"$OUTPUT\",\"nue\")" > "$LOG" 2>&1
+echo "macro_exit=$?"
+grep -E 'Entries:|Ievent:|error:' "$LOG" | tail -n 15
+
+export PIXELMAP_SKIP1="$OUTPUT"
+root -l -b -q -e '
+TFile f(gSystem->Getenv("PIXELMAP_SKIP1"));
+auto* t = f.Get<TTree>("pixelmap");
+std::cout << "PIXELMAP_ROWS=" << (t ? t->GetEntries() : -1) << std::endl;
+if (t) std::cout << "NONZERO_CHARGE="
+                 << t->GetEntries("wire_charge!=0") << std::endl;
+'
+```
+
+The output was:
+
+```text
+macro_exit=0
+Entries: 1
+-->0 , Ievent: 73102
+PIXELMAP_ROWS=19657
+NONZERO_CHARGE=19618
+```
+
+The 19,657 rows are pixel-map entries from one event, not 19,657 events. The nonzero charge count confirms that this run contains image information. The original `nue` selection accepted this event. I have not yet converted this standard pixel-map ROOT file to HDF5 or run TransformerCVN on it.
+
+## First-event diagnostic
 
 ## Files used
 
 | Purpose | Path |
 |---|---|
 | Input WC ROOT file | `/home/nataliema/recoenergy_2026_one_event/RecoEnergyS_2026_one.root` |
-| Original pixel-map macro | `/mnt/ironwolf_14t2/users/binzhang/preprocessing/Preprocessing_Alejandro/make_text_file_to_root_trks_shws.C` |
+| Reference pixel-map macro | `/mnt/ironwolf_14t2/users/binzhang/preprocessing/Preprocessing_Alejandro/make_text_file_to_root_trks_shws.C` |
 | Local diagnostic macro | `/home/nataliema/recoenergy_2026_one_event/step2_hitcenter_diagnostic/make_text_file_to_root_trks_shws.C` |
 | Pixel-map ROOT output | `/home/nataliema/recoenergy_2026_one_event/step2_hitcenter_diagnostic/pixelmap_2026_one_nue_hitcenter_diagnostic.root` |
 | Run log | `/home/nataliema/recoenergy_2026_one_event/step2_hitcenter_diagnostic/pixelmap_2026_one_nue_hitcenter_diagnostic.log` |
@@ -252,7 +310,7 @@ The original macro reads the input tree and sees one event, but its `nue` select
 
 For this event, the macro also receives invalid PF-vertex map coordinates near `-9999`. The input hits have nonzero charge (`all_abs_charge=908671` in the diagnostic output), but zero hits land within the 400×280 pixel-map window when it is centered on those invalid coordinates. The empty tree initially contained one zero-charge placeholder for each map.
 
-I made a local copy of the macro and changed two things for this diagnostic test: I did not skip the event on `fiducial_cut`, and I used the arithmetic mean of the hit global wire and tick in each plane as the map center. The macro already accumulates `sum_wire`, `sum_time`, and `nhits_count`. The original file was not edited. This output is a pipeline test for one chosen event, not a sample selected by the original `nue` cuts or centered on a reconstructed PF vertex.
+I made a local copy of the reference macro and changed two things for this diagnostic test: I did not skip the event on `fiducial_cut`, and I used the arithmetic mean of the hit global wire and tick in each plane as the map center. The macro already accumulates `sum_wire`, `sum_time`, and `nhits_count`. The shared reference file was not edited. This output is a pipeline test for one chosen event, not a sample selected by the original `nue` cuts or centered on a reconstructed PF vertex.
 
 The following reproduces these two changes in a local copy:
 
@@ -324,7 +382,7 @@ root -l -b -q -e 'TFile f(gSystem->Getenv("PIXELMAP_OUTPUT")); auto* t=f.Get<TTr
 
 ## Result
 
-My one-event run returned:
+The October 1 one-event run returned:
 
 ```text
 macro_exit=0
@@ -336,12 +394,11 @@ HIT_CENTER plane=2 wire=1749 tick=4406
 ROWS=4047 NONZERO_CHARGE=3996 NONZERO_CORRCHARGE=3996
 ```
 
-The output ROOT file is about 48 KB. The 4047 pixel-map rows come from the same one input event; they are not 4047 events. The nonzero charge counts show that the diagnostic map contains hit information. To use the original `nue` selection and PF-vertex centering, a different 2026 event with valid PF-vertex coordinates and a passing fiducial cut is needed.
-
+The output ROOT file is about 48 KB. The 4047 pixel-map rows come from the same one input event; they are not 4047 events. The nonzero charge counts show that the diagnostic map contains hit information. The second event above demonstrates the original `nue` selection and PF-vertex centering.
 
 # Step 3
 
-This step converts the diagnostic pixel-map ROOT file to an intermediate HDF5 file, then uses `preprocess2.py` from the shared preprocessing directory to produce the sparse HDF5 arrays. It processes the same single event. The 400×280 image shape matches the `nue` pixel-map macro.
+This step converts the first event's diagnostic pixel-map ROOT file to an intermediate HDF5 file, then uses `preprocess2.py` from the shared preprocessing directory to produce the sparse HDF5 arrays. It processes that same single event. The 400×280 image shape matches the `nue` pixel-map macro. The standard second-event output from Step 2 has not yet gone through this step.
 
 ## Files used
 
