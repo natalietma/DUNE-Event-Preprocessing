@@ -1,5 +1,7 @@
 # DUNE-Event-Preprocessing-with-RecoEnergyS-2026-
-Step 1: This step processes one event from a 2026 HD antineutrino reco2 file and creates a ROOT TTree at recoEnergy/WC. The pixel-map and HDF5 stages have not been run.
+## Step 1: 
+
+This step processes one event from a 2026 HD antineutrino reco2 file and creates a ROOT TTree at recoEnergy/WC. The pixel-map and HDF5 stages have not been run.
 
 Files used
 | Purpose | Path |
