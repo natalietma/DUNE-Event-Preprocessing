@@ -217,7 +217,7 @@ The script uses a fixed output filename. Running it again can replace the previo
 
 ## Result
 
-The run on September 30, 2026 returned:
+My run returned:
 
 ```text
 lar_status=0
@@ -230,3 +230,111 @@ WC_ENTRIES=1
 ```
 
 The output ROOT file is about 2.0 MB. `WC_ENTRIES=1` confirms that `recoEnergy/WC` contains one event. I have not checked the reconstructed energy values against truth values yet.
+
+
+# Step 2
+
+This step reads the one-event `recoEnergy/WC` tree from Step 1 and makes a pixel-map ROOT file. Alejandro's macro is used. The directory had moved from the path used in Step 1 to `/mnt/ironwolf_14t2/users/binzhang/preprocessing/Preprocessing_Alejandro`.
+
+## Files used
+
+| Purpose | Path |
+|---|---|
+| Input WC ROOT file | `/home/nataliema/recoenergy_2026_one_event/RecoEnergyS_2026_one.root` |
+| Original pixel-map macro | `/mnt/ironwolf_14t2/users/binzhang/preprocessing/Preprocessing_Alejandro/make_text_file_to_root_trks_shws.C` |
+| Local diagnostic macro | `/home/nataliema/recoenergy_2026_one_event/step2_hitcenter_diagnostic/make_text_file_to_root_trks_shws.C` |
+| Pixel-map ROOT output | `/home/nataliema/recoenergy_2026_one_event/step2_hitcenter_diagnostic/pixelmap_2026_one_nue_hitcenter_diagnostic.root` |
+| Run log | `/home/nataliema/recoenergy_2026_one_event/step2_hitcenter_diagnostic/pixelmap_2026_one_nue_hitcenter_diagnostic.log` |
+
+## Changes for this one-event test
+
+The original macro reads the input tree and sees one event, but its `nue` selection sets `fiducial_cut=1` and skips event 73101. This flag is based on hit wire and tick conditions in the macro. It does not by itself establish that the true vertex is outside the detector fiducial volume.
+
+For this event, the macro also receives invalid PF-vertex map coordinates near `-9999`. The input hits have nonzero charge (`all_abs_charge=908671` in the diagnostic output), but zero hits land within the 400×280 pixel-map window when it is centered on those invalid coordinates. The empty tree initially contained one zero-charge placeholder for each map.
+
+I made a local copy of the macro and changed two things for this diagnostic test: I did not skip the event on `fiducial_cut`, and I used the arithmetic mean of the hit global wire and tick in each plane as the map center. The macro already accumulates `sum_wire`, `sum_time`, and `nhits_count`. The original file was not edited. This output is a pipeline test for one chosen event, not a sample selected by the original `nue` cuts or centered on a reconstructed PF vertex.
+
+The following reproduces these two changes in a local copy:
+
+```bash
+ORIG=/mnt/ironwolf_14t2/users/binzhang/preprocessing/Preprocessing_Alejandro/make_text_file_to_root_trks_shws.C
+WORK="$HOME/recoenergy_2026_one_event/step2_hitcenter_diagnostic"
+mkdir -p "$WORK"
+
+python3 - "$ORIG" "$WORK/make_text_file_to_root_trks_shws.C" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+src, dst = map(Path, sys.argv[1:])
+text = src.read_text()
+
+cut = 'if (type == "nue" && fiducial_cut) continue;'
+assert text.count(cut) == 1
+text = text.replace(
+    cut,
+    'std::cout << "DIAGNOSTIC nhits=" << nhits '
+    '<< " fiducial_cut=" << fiducial_cut << std::endl;\n'
+    '        // One-event diagnostic: do not skip on the nue fiducial cut.',
+    1,
+)
+
+wire_pattern = r'(?m)^([ \t]*)mean_wire\[ii\]\s*=\s*pfVtxGlobalWire\[[^\n;]+\];'
+time_pattern = r'(?m)^([ \t]*)mean_time\[ii\]\s*=\s*pfVtxGlobalTick\[[^\n;]+\];'
+
+def replace_wire(match):
+    indent = match.group(1)
+    return (
+        f'{indent}if (nhits_count[ii] == 0) std::abort();\n'
+        f'{indent}mean_wire[ii] = int(round(sum_wire[ii] / nhits_count[ii]));'
+    )
+
+def replace_time(match):
+    indent = match.group(1)
+    return (
+        f'{indent}mean_time[ii] = int(round(sum_time[ii] / nhits_count[ii]));\n'
+        f'{indent}std::cout << "HIT_CENTER plane=" << ii '
+        f'<< " wire=" << mean_wire[ii] '
+        f'<< " tick=" << mean_time[ii] << std::endl;'
+    )
+
+text, nw = re.subn(wire_pattern, replace_wire, text)
+text, nt = re.subn(time_pattern, replace_time, text)
+assert (nw, nt) == (1, 1), (nw, nt)
+dst.write_text(text)
+print(f"Created {dst}")
+PY
+```
+
+Run the local macro on the same one-event input and check that the output contains nonzero charge:
+
+```bash
+INPUT="$HOME/recoenergy_2026_one_event/RecoEnergyS_2026_one.root"
+OUTPUT="$WORK/pixelmap_2026_one_nue_hitcenter_diagnostic.root"
+LOG="$WORK/pixelmap_2026_one_nue_hitcenter_diagnostic.log"
+
+root -l -b -q "$WORK/make_text_file_to_root_trks_shws.C(\"$INPUT\",\"$OUTPUT\",\"nue\")" > "$LOG" 2>&1
+echo "macro_exit=$?"
+grep -E 'Entries:|Ievent:|DIAGNOSTIC|HIT_CENTER|Error|Running time' "$LOG" | tail -20
+ls -lh "$OUTPUT"
+
+export PIXELMAP_OUTPUT="$OUTPUT"
+root -l -b -q -e 'TFile f(gSystem->Getenv("PIXELMAP_OUTPUT")); auto* t=f.Get<TTree>("pixelmap"); std::cout << "ROWS=" << (t ? t->GetEntries() : -1) << " NONZERO_CHARGE=" << (t ? t->GetEntries("wire_charge!=0") : -1) << " NONZERO_CORRCHARGE=" << (t ? t->GetEntries("wire_corrcharge!=0") : -1) << std::endl;' 2>&1 | tail -n 12
+```
+
+## Result
+
+My one-event run returned:
+
+```text
+macro_exit=0
+Entries: 1
+-->0 , Ievent: 73101
+HIT_CENTER plane=0 wire=2123 tick=4381
+HIT_CENTER plane=1 wire=1617 tick=4380
+HIT_CENTER plane=2 wire=1749 tick=4406
+ROWS=4047 NONZERO_CHARGE=3996 NONZERO_CORRCHARGE=3996
+```
+
+The output ROOT file is about 48 KB. The 4047 pixel-map rows come from the same one input event; they are not 4047 events. The nonzero charge counts show that the diagnostic map contains hit information. To use the original `nue` selection and PF-vertex centering, a different 2026 event with valid PF-vertex coordinates and a passing fiducial cut is needed.
+
