@@ -211,6 +211,8 @@ I ran it with:
 bash "$HOME/run_recoenergy_2026_one.sh"
 ```
 
+This command uses my paths on tau-neutrino. If you run it from your own account, first copy the FHiCL file and run script to your account, and build the RecoEnergyS plugin in your own LArSoft work area. Then update DEV, FCL, INPUT, and OUT in the script, and check that you can read the input ROOT file. The script will not run unchanged from another account.
+
 The script uses a fixed output filename. Running it again can replace the previous ROOT file.
 
 ## Result
