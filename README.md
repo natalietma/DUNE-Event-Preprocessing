@@ -338,3 +338,119 @@ ROWS=4047 NONZERO_CHARGE=3996 NONZERO_CORRCHARGE=3996
 
 The output ROOT file is about 48 KB. The 4047 pixel-map rows come from the same one input event; they are not 4047 events. The nonzero charge counts show that the diagnostic map contains hit information. To use the original `nue` selection and PF-vertex centering, a different 2026 event with valid PF-vertex coordinates and a passing fiducial cut is needed.
 
+
+# Step 3
+
+This step converts the diagnostic pixel-map ROOT file to an intermediate HDF5 file, then uses `preprocess2.py` from the shared preprocessing directory to produce the sparse HDF5 arrays. It processes the same single event. The 400×280 image shape matches the `nue` pixel-map macro.
+
+## Files used
+
+| Purpose | Path |
+|---|---|
+| Pixel-map ROOT input | `/home/nataliema/recoenergy_2026_one_event/step2_hitcenter_diagnostic/pixelmap_2026_one_nue_hitcenter_diagnostic.root` |
+| Alejandro's `root2hdf5` executable | `/home/ayankelevich/.local/bin/root2hdf5` |
+| Intermediate HDF5 output | `/home/nataliema/recoenergy_2026_one_event/step3_diagnostic/pixelmap_2026_one_nue_hitcenter_diagnostic.root.h5` |
+| Reference HDF5 preprocessing script | `/mnt/ironwolf_14t2/users/binzhang/preprocessing/Preprocessing_Alejandro/preprocess2.py` |
+| Local one-event script copy | `/home/nataliema/recoenergy_2026_one_event/step3_diagnostic/preprocess2_one.py` |
+| Final diagnostic HDF5 output | `/home/nataliema/recoenergy_2026_one_event/step3_diagnostic/pixelmap_2026_one_nue_hitcenter_diagnostic_final.h5` |
+
+## Convert the ROOT file to intermediate HDF5
+
+The `root2hdf5` executable imports `src.root2hdf5` from Alejandro's Python 3.10 site-packages. I supplied that directory in `PYTHONPATH` and converted only the one-event ROOT file. I did not run the reference `convert_h5.sh`, which loops over many atmospheric-neutrino files.
+
+```bash
+ROOT_FILE="$HOME/recoenergy_2026_one_event/step2_hitcenter_diagnostic/pixelmap_2026_one_nue_hitcenter_diagnostic.root"
+OUT_DIR="$HOME/recoenergy_2026_one_event/step3_diagnostic"
+INTERMEDIATE_H5="$OUT_DIR/pixelmap_2026_one_nue_hitcenter_diagnostic.root.h5"
+CONVERTER=/home/ayankelevich/.local/bin/root2hdf5
+
+mkdir -p "$OUT_DIR"
+if [[ ! -e "$INTERMEDIATE_H5" ]]; then
+  PYTHONPATH=/home/ayankelevich/.local/lib/python3.10/site-packages \
+    "$CONVERTER" -i "$ROOT_FILE" -o "$INTERMEDIATE_H5" -t pixelmap \
+    > "$OUT_DIR/root2hdf5_retry.log" 2>&1
+  echo "convert_status=$?"
+  tail -n 25 "$OUT_DIR/root2hdf5_retry.log"
+fi
+```
+
+The conversion returned `retry_status=0` in the original run and produced a 1.6 MB file. Its HDF5 root contains a compound dataset named `pixelmap` with 4047 rows. The dataset name matters for the next step.
+
+## Produce the final HDF5 arrays
+
+The reference `preprocess2.py` expects a compound dataset named `ArrayOfStructures`, while this `root2hdf5` output names it `pixelmap`. Its command-line input loop also starts at `sys.argv[1]`, which includes the output path. I copied the script locally and changed only these two references. The shared file remains the reference source.
+
+```bash
+BASE=/mnt/ironwolf_14t2/users/binzhang/preprocessing/Preprocessing_Alejandro
+OUT_DIR="$HOME/recoenergy_2026_one_event/step3_diagnostic"
+INPUT_H5="$OUT_DIR/pixelmap_2026_one_nue_hitcenter_diagnostic.root.h5"
+FINAL_H5="$OUT_DIR/pixelmap_2026_one_nue_hitcenter_diagnostic_final.h5"
+LOCAL_SCRIPT="$OUT_DIR/preprocess2_one.py"
+
+python3 - "$BASE/preprocess2.py" "$LOCAL_SCRIPT" <<'PY'
+from pathlib import Path
+import sys
+
+source, target = map(Path, sys.argv[1:3])
+script = source.read_text()
+old_table = "['ArrayOfStructures']"
+old_args = "for arg in sys.argv[1:]:"
+assert script.count(old_table) == 1
+assert script.count(old_args) == 1
+script = script.replace(old_table, "['pixelmap']", 1)
+script = script.replace(old_args, "for arg in sys.argv[2:]:", 1)
+target.write_text(script)
+print("Created:", target)
+PY
+
+if [[ ! -e "$FINAL_H5" ]]; then
+  PYTHONPATH=/home/ayankelevich/.local/lib/python3.10/site-packages \
+    /usr/bin/python3 "$LOCAL_SCRIPT" "$FINAL_H5" "$INPUT_H5" \
+    > "$OUT_DIR/preprocess2_one.log" 2>&1
+  echo "preprocess_status=$?"
+  tail -n 35 "$OUT_DIR/preprocess2_one.log"
+fi
+```
+
+I used `/usr/bin/python3` here because it has `tables 3.7.0`; my default Miniconda Python did not have `tables`. The run returned `preprocess_status=0` and printed `1` processed file and `1` event. The `NaturalNameWarning` messages refer to HDF5 node names containing periods, such as `mc.png_label`.
+
+Check the final file:
+
+```bash
+FINAL_H5="$HOME/recoenergy_2026_one_event/step3_diagnostic/pixelmap_2026_one_nue_hitcenter_diagnostic_final.h5"
+
+/usr/bin/python3 - "$FINAL_H5" <<'PY'
+import sys
+import numpy as np
+import tables
+
+with tables.open_file(sys.argv[1], "r") as file:
+    root = file.root
+    shape = root.cvnmap_shape.read()
+    charges = root.cvnmap_value.read()
+    print("CVNMAP_SHAPE=", shape.tolist())
+    print("EVENT_ROWS=", root.trueE.nrows)
+    print("SPARSE_PIXELS=", len(charges))
+    print("NONZERO_CHARGE=", np.count_nonzero(charges))
+    print("PRONG_MASK_SHAPE=", root.input_png3d_pad_mask.shape)
+    assert shape.tolist() == [1, 3, 400, 280]
+    assert root.trueE.nrows == 1
+    assert np.count_nonzero(charges) > 0
+PY
+```
+
+## Result and limits
+
+The validated output is:
+
+```text
+CVNMAP_SHAPE= [1, 3, 400, 280]
+EVENT_ROWS= 1
+SPARSE_PIXELS= 2061
+NONZERO_CHARGE= 2058
+PRONG_MASK_SHAPE= (1, 20)
+```
+
+`SPARSE_PIXELS` counts event-map pixels, not events. The earlier ROOT tree's 4047 rows also include prong maps. The final preprocessing script printed `Unknown pdg: -999` for multiple prongs, so those prong truth labels are missing for this event. This output demonstrates that the one-event pipeline creates nonempty event images; it should not be used as a standard selected `nue` sample or as a training example with reliable prong labels. The diagnostic macro bypasses the original `nue` fiducial cut and centers maps on hit means because the PF-vertex map coordinates were invalid for this event.
+
+
