@@ -20,7 +20,7 @@ Files used
 
 ## New FHiCL file
 
-The reco2 input uses `dune10kt_v5_1x2x6` geometry. Bin's original `recoenergys.fcl` selected v2 geometry and ran additional producers. For this one-event test, I used v5 geometry and scheduled only the `RecoEnergyS` analyzer. The input already contains `hitfd` hits, `pandora` clusters and vertices, `pandoraShower` showers, `pandoraTrack` tracks, and the energy reconstruction products.
+The reco2 input uses `dune10kt_v5_1x2x6` geometry. The original `recoenergys.fcl` selected v2 geometry and ran additional producers. For this one-event test, I used v5 geometry and scheduled only the `RecoEnergyS` analyzer. The input already contains `hitfd` hits, `pandora` clusters and vertices, `pandoraShower` showers, `pandoraTrack` tracks, and the energy reconstruction products.
 
 I saved the following file as `/home/nataliema/transformercvn_fcl_overrides/recoenergys_2026_one.fcl`:
 
@@ -113,7 +113,7 @@ The `services` table has a v2 geometry entry from the reference configuration. T
 
 ## Build
 
-I compiled Bin's `RecoEnergyS_module.cc` in `/home/nataliema/recoenergy_one_sl7`. The host runs Ubuntu 22.04, and the LArSoft build uses `slf7.x86_64.e26.prof`, so I built inside a Scientific Linux 7 Apptainer image. This was a one-time build; I do not rebuild for each event.
+I compiled `RecoEnergyS_module.cc` in `/home/nataliema/recoenergy_one_sl7`. The host runs Ubuntu 22.04, and the LArSoft build uses `slf7.x86_64.e26.prof`, so I built inside a Scientific Linux 7 Apptainer image. This was a one-time build; I do not rebuild for each event.
 
 The work area uses LArSoft `v10_23_00` and mrb `v6_09_13`. Its `srcs/CMakeLists.txt` includes `dunereco`, and `dunereco/dunereco/FDSensOpt/CMakeLists.txt` includes `RecoEnergySOne`. With those files already in place, I used the following build commands:
 
